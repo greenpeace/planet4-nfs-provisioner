@@ -1,0 +1,83 @@
+---
+defaults: &defaults
+  docker:
+    - image: gcr.io/planet-4-151612/circleci-base:latest
+
+version: 2
+
+jobs:
+  lint:
+    <<: *defaults
+    steps:
+      - checkout
+      - run: make lint | tee /tmp/yamllint.log
+      - run:
+          name: Notify failure
+          when: on_fail
+          command: |
+            TYPE="Test" \
+            EXTRA_TEXT="\`\`\`$(cat /tmp/yamllint.log)\`\`\`" \
+            notify-job-failure.sh
+  dev:
+    <<: *defaults
+    environment:
+      GOOGLE_PROJECT_ID: planet-4-151612
+    steps:
+      - checkout
+      - run: activate-gcloud-account.sh
+      - run: make dev | tee /tmp/deploy.log
+      - run:
+          name: Notify failure
+          when: on_fail
+          command: |
+            TYPE="Deploy" \
+            EXTRA_TEXT="\`\`\`
+            $(cat /tmp/deploy.log)
+            \`\`\`" \
+            notify-job-failure.sh
+      - run: |
+          TYPE="Deploy" \
+          EXTRA_TEXT="\`\`\`$(make history)\`\`\`" \
+          notify-job-success.sh
+  prod:
+    <<: *defaults
+    environment:
+      GOOGLE_PROJECT_ID: planet4-production
+    steps:
+      - checkout
+      - run: activate-gcloud-account.sh
+      - run: make prod | tee /tmp/deploy.log
+      - run:
+          name: Notify failure
+          when: on_fail
+          command: |
+            TYPE="Deploy" \
+            EXTRA_TEXT="\`\`\`$(cat /tmp/deploy.log)\`\`\`" \
+            notify-job-failure.sh
+      - run: |
+          TYPE="Deploy" \
+          EXTRA_TEXT="\`\`\`$(make history)\`\`\`" \
+          notify-job-success.sh
+workflows:
+  version: 2
+  commit:
+    jobs:
+      - lint:
+          context: org-global
+          filters:
+            branches:
+              ignore:
+                - develop
+                - master
+      - dev:
+          context: org-global
+          filters:
+            branches:
+              only:
+                - develop
+      - prod:
+          context: org-global
+          filters:
+            branches:
+              only:
+                - master
