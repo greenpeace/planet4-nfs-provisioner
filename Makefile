@@ -28,6 +28,7 @@ endif
 	helm upgrade --install --force --wait $(RELEASE_NAME) \
 		--namespace=$(RELEASE_NAMESPACE) \
 		--version $(CHART_VERSION) \
+		--values values.yaml \
 		$(CHART_NAME)
 
 prod: lint
@@ -41,6 +42,7 @@ endif
 	helm upgrade --install --force --wait $(RELEASE_NAME) \
 		--namespace=$(RELEASE_NAMESPACE) \
 		--version $(CHART_VERSION) \
+		--values values.yaml \
 		$(CHART_NAME)
 
 history:
